@@ -307,6 +307,7 @@
 			isa = PBXGroup;
 			children = (
 				AC6268921F2F6CF1000CBF2D /* VoodooI2CController.cpp */,
+				AC7400B81F3B6F1000937DD5 /* Introduction.md */,
 				AC6268931F2F6CF1000CBF2D /* VoodooI2CController.hpp */,
 				AC49544F1F31E91D0040E11F /* VoodooI2CPCIController.cpp */,
 				AC4954501F31E91D0040E11F /* VoodooI2CPCIController.hpp */,
@@ -324,7 +325,6 @@
 		AC7400B71F3B6EB700937DD5 /* Documentation */ = {
 			isa = PBXGroup;
 			children = (
-				AC7400B81F3B6F1000937DD5 /* Introduction.md */,
 			);
 			name = Documentation;
 			sourceTree = "<group>";
@@ -697,13 +697,13 @@
 				CURRENT_PROJECT_VERSION = 2.0.1;
 				"HEADER_SEARCH_PATHS[arch=*]" = "\"../Dependencies/Headers\"/**";
 				INFOPLIST_FILE = VoodooI2C/Info.plist;
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MODULE_NAME = com.alexandred.VoodooI2C;
 				MODULE_VERSION = 2.0.1;
 				"OTHER_CPLUSPLUSFLAGS[arch=*]" = "-Wno-inconsistent-missing-override";
 				PRODUCT_BUNDLE_IDENTIFIER = com.alexandred.VoodooI2C;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx10.12;
+				SDKROOT = macosx;
 				WRAPPER_EXTENSION = kext;
 			};
 			name = Debug;
@@ -718,14 +718,14 @@
 				CURRENT_PROJECT_VERSION = 2.0.1;
 				"HEADER_SEARCH_PATHS[arch=*]" = "\"../Dependencies/Headers\"/**";
 				INFOPLIST_FILE = VoodooI2C/Info.plist;
-				MACOSX_DEPLOYMENT_TARGET = 10.11;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MODULE_NAME = com.alexandred.VoodooI2C;
 				MODULE_VERSION = 2.0.1;
 				ONLY_ACTIVE_ARCH = YES;
 				"OTHER_CPLUSPLUSFLAGS[arch=*]" = "-Wno-inconsistent-missing-override";
 				PRODUCT_BUNDLE_IDENTIFIER = com.alexandred.VoodooI2C;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx10.12;
+				SDKROOT = macosx;
 				WRAPPER_EXTENSION = kext;
 			};
 			name = Release;

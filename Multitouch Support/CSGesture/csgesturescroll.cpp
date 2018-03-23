@@ -68,12 +68,12 @@ bool CSGestureScroll::isScrolling(){
     if (isTouchActive)
         return true;
     
-    if (momentumscrollcurrenty > 0 || momentumscrollrest1y > 0 || momentumscrollrest2y > 0)
+    if (abs(momentumscrollcurrenty) > 0 || abs(momentumscrollrest1y) > 0 || abs(momentumscrollrest2y) > 0)
         return true;
     
-    if (momentumscrollcurrentx > 0 || momentumscrollrest1x > 0 || momentumscrollrest2x > 0)
+    if (abs(momentumscrollcurrentx) > 0 || abs(momentumscrollrest1x) > 0 || abs(momentumscrollrest2x) > 0)
         return true;
-    
+	
     return false;
 }
 
@@ -92,10 +92,11 @@ void CSGestureScroll::stopScroll(){
     // disableScrollingDelayLaunch();
 }
 
+
 void CSGestureScroll::scrollTimer(){
     if (momentumscrollcurrentx) {
         int dx = momentumscrollcurrentx / 10 + momentumscrollrest2x;
-        
+//		IOLog("momentumscrollcurrentx: %d, momentumscrollrest2x: %d", momentumscrollcurrentx, momentumscrollrest2x);
         if (abs(dx) > 7) {
             //dispatch the scroll event
             if (inertiaScroll) {
@@ -115,7 +116,7 @@ void CSGestureScroll::scrollTimer(){
     
     if (momentumscrollcurrenty) {
         int dy = momentumscrollcurrenty / 10 + momentumscrollrest2y;
-        
+//		IOLog("momentumscrollcurrenty: %d, momentumscrollrest2y: %d", momentumscrollcurrenty, momentumscrollrest2y);
         if (abs(dy) > 7) {
             //dispatch the scroll event
             if (inertiaScroll) {
@@ -145,27 +146,27 @@ void CSGestureScroll::ProcessScroll(int x1, int y1, int x2, int y2) {
     if (isPropertyValid(x1) &&
         isPropertyValid(y1) &&
         isPropertyValid(x2) &&
-        isPropertyValid(y2)){
+        isPropertyValid(y2)) {
         
         int delta_x1 = x1 - lastx1;
         int delta_y1 = y1 - lasty1;
         
         int delta_x2 = x2 - lastx2;
         int delta_y2 = y2 - lasty2;
-        
+		
         bool ignoreScroll = false;
         
         if (lastx1 == 0 || lasty1 == 0 || lastx2 == 0 || lasty2 == 0)
             ignoreScroll = true;
-            
+		
         lastx1 = x1;
         lasty1 = y1;
         lastx2 = x2;
         lasty2 = y2;
-        
-        if (ignoreScroll)
-            return;
-        
+		
+		if (ignoreScroll)
+			return;
+		
         int avgy = (delta_y1 + delta_y2) / 2;
         int avgx = (delta_x1 + delta_x2) / 2;
         
@@ -188,7 +189,6 @@ void CSGestureScroll::ProcessScroll(int x1, int y1, int x2, int y2) {
         
         if (abs(avgy) > abs(avgx)) {
             _pointingWrapper->updateScroll(avgy, 0, 0);
-            
             if (!isSameSign(momentumscrollcurrenty, avgy)) {
                 momentumscrollcurrenty = 0;
                 momentumscrollrest1y = 0;
@@ -198,10 +198,11 @@ void CSGestureScroll::ProcessScroll(int x1, int y1, int x2, int y2) {
             
             dy_history.filter(avgy);
             dx_history.reset();
-        } else {
+        }
+		else {
             _pointingWrapper->updateScroll(0, avgx, 0);
-            
-            if (!isSameSign(momentumscrollcurrentx, avgx)) {
+			// disable horizontal inertial scroll
+            if (isSameSign(momentumscrollcurrentx, avgx)) {
                 momentumscrollcurrentx = 0;
                 momentumscrollrest1x = 0;
                 momentumscrollrest2x = 0;
@@ -211,24 +212,29 @@ void CSGestureScroll::ProcessScroll(int x1, int y1, int x2, int y2) {
             dx_history.filter(avgx);
             dy_history.reset();
         }
-        ;
         isTouchActive = true;
-    } else {
+    }
+	else {
         if (isTouchActive){
             if (dx_history.count() > momentumscrollsamplesmin) {
                 int scrollx = dx_history.sum() * 10;
-                if (isSameSign(momentumscrollcurrentx, scrollx))
+//				IOLog("momentumscrollcurrentx: %d, scrollx: %d", momentumscrollcurrentx, scrollx);
+				if (isSameSign(momentumscrollcurrentx, scrollx)) {
                     momentumscrollcurrentx += scrollx;
-                else
+				}
+				else {
                     momentumscrollcurrentx = scrollx;
+				}
                 momentumscrollrest1x = 0;
                 momentumscrollrest2x = 0;
             }
             
             if (dy_history.count() > momentumscrollsamplesmin) {
                 int scrolly = dy_history.sum() * 10;
-                if (isSameSign(momentumscrollcurrenty, scrolly))
-                    momentumscrollcurrenty += scrolly;
+//				IOLog("momentumscrollcurrenty: %d, scrolly: %d", momentumscrollcurrenty, scrolly);
+				if (isSameSign(momentumscrollcurrenty, scrolly)) {
+					momentumscrollcurrenty += scrolly;
+				}
                 else
                     momentumscrollcurrenty = scrolly;
                 momentumscrollrest1y = 0;

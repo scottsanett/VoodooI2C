@@ -42,11 +42,20 @@ private:
         UInt8 y;
         UInt8 buttonMask;
     } lastmouse;
-    
+	
+	enum PinchSpread { Null, GesturePinch, GestureSpread};
+	
     IOWorkLoop* work_loop;
     IOTimerEventSource* timer_event_source;
     
     int distancesq(int delta_x, int delta_y);
+	bool isSameSign(int n1, int n2);
+	bool moveRightUp(int dx, int dy);
+	bool moveLeftDown(int dx, int dy);
+	bool isThreeFingerPinch(int deltay1, int deltay2, int deltay3);
+	bool isThreeFingerSpread(int deltay1, int deltay2, int deltay3);
+	bool isFourFingerPinch(int delta1, int delta2, int delta3, int delta4);
+	bool isFourFingerSpread(int delta1, int delta2, int delta3, int delta4);
     
     //os callbacks
     void update_relative_mouse(char button,

@@ -22,7 +22,12 @@ OSDefineMetaClassAndStructors(VoodooI2CCSGestureEngine, VoodooI2CMultitouchEngin
 #define MOUSE_BUTTON_2     0x02
 #define MOUSE_BUTTON_3     0x04
 
+// Left Control, Left Shift, Left Alt/Windows, Left GUI/CMD
+// Right Control, Right Shift, Right Alt/Windows, Right GUI/CMD
+
 #define KBD_LCONTROL_BIT     1
+#define KBD_LSHIFT_BIT		 2
+#define KBD_LWINDOWS_BIT	 4
 #define KBD_LGUI_BIT         8
 
 #define KBD_KEY_CODES        6
@@ -89,8 +94,8 @@ typedef struct __attribute__((__packed__)) _CSGESTURE_KEYBOARD_REPORT
     
     BYTE      ReportID;
     
-    // Left Control, Left Shift, Left Alt, Left GUI
-    // Right Control, Right Shift, Right Alt, Right GUI
+    // Left Control, Left Shift, Left Alt/Windows, Left GUI/CMD
+    // Right Control, Right Shift, Right Alt/Windows, Right GUI/CMD
     BYTE      ShiftKeyFlags;
     
         BYTE      Reserved;
@@ -173,6 +178,102 @@ void VoodooI2CCSGestureEngine::timedProcessGesture() {
     this->timer_event_source->setTimeoutMS(5);
 }
 
+bool VoodooI2CCSGestureEngine::isSameSign(int n1, int n2) {
+	if (n1 == 0 || n2 == 0)
+		return true;
+	if (n1 > 0 && n2 > 0)
+		return true;
+	if (n1 < 0 && n2 < 0)
+		return true;
+	return false;
+}
+
+bool VoodooI2CCSGestureEngine::moveRightUp(int dx, int dy) {
+	return (dx > 0 && dy > 0);
+}
+
+bool VoodooI2CCSGestureEngine::moveLeftDown(int dx, int dy) {
+	return (dx < 0 && dy < 0);
+}
+
+bool VoodooI2CCSGestureEngine::isThreeFingerSpread(int delta1, int delta2, int delta3) {
+	IOLog("deltay1: %d, deltay2: %d, deltay3: %d", delta1, delta2, delta3);
+	
+	if (abs(delta1) < 5 || abs(delta2) < 5 || abs(delta3) < 5) {
+		return false;
+	}
+	
+	if (delta1 > 0) {
+		return (delta2 < 0 && delta3 < 0);
+	}
+	else if (delta2 > 0) {
+		return (delta1 < 0 && delta3 < 0);
+	}
+	else if (delta3 > 0) {
+		return (delta2 < 0 && delta1 < 0);
+	}
+	else return false;
+}
+
+bool VoodooI2CCSGestureEngine::isThreeFingerPinch(int delta1, int delta2, int delta3) {
+	if (abs(delta1) < 5 || abs(delta2) < 5 || abs(delta3) < 5) {
+		return false;
+	}
+	
+	if (delta1 < 0) {
+		return (delta2 > 0 && delta3 > 0);
+	}
+	else if (delta2 < 0) {
+		return (delta1 > 0 && delta3 > 0);
+	}
+	else if (delta3 < 0) {
+		return (delta1 > 0 && delta2 > 0);
+	}
+	else return false;
+}
+
+bool VoodooI2CCSGestureEngine::isFourFingerPinch(int delta1, int delta2, int delta3, int delta4) {
+	
+	if (abs(delta1) < 2 || abs(delta2) < 2 || abs(delta3) < 2 || abs(delta4) < 2) {
+		return false;
+	}
+	
+	if (delta1 < 0) {
+		return (delta2 >= 0 && delta3 >= 0 && delta4 >= 0);
+	}
+	else if (delta2 < 0) {
+		return (delta1 >= 0 && delta3 >= 0 && delta4 >= 0);
+	}
+	else if (delta3 < 0) {
+		return (delta1 >= 0 && delta2 >= 0 && delta4 >= 0);
+	}
+	else if (delta4 < 0) {
+		return (delta1 >= 0 && delta2 >= 0 && delta3 >= 0);
+	}
+	else return false;
+}
+
+bool VoodooI2CCSGestureEngine::isFourFingerSpread(int delta1, int delta2, int delta3, int delta4) {
+	
+	if (abs(delta1) < 2 || abs(delta2) < 2 || abs(delta3) < 2 || abs(delta4) < 2) {
+		return false;
+	}
+	
+	if (delta1 > 0) {
+		return (delta2 <= 0 && delta3 <= 0 && delta4 <= 0);
+	}
+	else if (delta2 > 0) {
+		return (delta1 <= 0 && delta3 <= 0 && delta4 <= 0);
+	}
+	else if (delta3 > 0) {
+		return (delta1 <= 0 && delta2 <= 0 && delta4 <= 0);
+	}
+	else if (delta4 > 0) {
+		return (delta1 <= 0 && delta2 <= 0 && delta3 <= 0);
+	}
+	else return false;
+}
+
 bool VoodooI2CCSGestureEngine::ProcessMove(csgesture_softc *sc, int abovethreshold, int iToUse[4]) {
     int frequmult = 10 / sc->frequency;
     
@@ -201,7 +302,7 @@ bool VoodooI2CCSGestureEngine::ProcessMove(csgesture_softc *sc, int abovethresho
             if (j != i) {
                 if (sc->blacklistedids[j] != 1) {
                     if (sc->y[j] > sc->y[i]) {
-                        if (sc->truetick[j] > sc->truetick[i] + (15 * frequmult)) {
+                        if (sc->truetick[j] > sc->truetick[i] + (10 * frequmult)) {
                             sc->blacklistedids[j] = 1;
                         }
                     }
@@ -224,7 +325,7 @@ bool VoodooI2CCSGestureEngine::ProcessScroll(csgesture_softc *sc, int abovethres
     
     sc->scrollx = 0;
     sc->scrolly = 0;
-        
+	
     if (abovethreshold == 2 || sc->scrollingActive) {
         int i1 = iToUse[0];
         int i2 = iToUse[1];
@@ -255,7 +356,7 @@ bool VoodooI2CCSGestureEngine::ProcessScroll(csgesture_softc *sc, int abovethres
         int delta_x2 = sc->x[i2] - sc->lastx[i2];
         int delta_y2 = sc->y[i2] - sc->lasty[i2];
         
-#if 0
+/*
         if ((abs(delta_y1) + abs(delta_y2)) > (abs(delta_x1) + abs(delta_x2))) {
             int avgy = (delta_y1 + delta_y2) / 2;
             sc->scrolly = avgy;
@@ -269,6 +370,7 @@ bool VoodooI2CCSGestureEngine::ProcessScroll(csgesture_softc *sc, int abovethres
             sc->scrollx = 0;
         if (abs(sc->scrolly) > 100)
             sc->scrolly = 0;
+		
         if (sc->scrolly > 8)
             sc->scrolly = sc->scrolly / 8;
         else if (sc->scrolly > 5)
@@ -297,22 +399,39 @@ bool VoodooI2CCSGestureEngine::ProcessScroll(csgesture_softc *sc, int abovethres
         
         sc->scrollx = -sc->scrollx;
         sc->scrolly = -sc->scrolly;
-#endif
+*/
         
         int scrollx = 0;
         int scrolly = 0;
-        
+		int index = 5; // was 5
+		
+//		IOLog("delta_x1: %d, delta_x2: %d; delta_y1: %d, delta_y2: %d",delta_x1, delta_x2, delta_y1, delta_y2);
+		
+		if (abs(delta_y1 - delta_y2) < 200) {
+			scrolly = (delta_y1 + delta_y2) / 2;
+		}
+		
+		if (abs(delta_x1 - delta_x2) < 200) {
+			scrollx = (delta_x1 + delta_x2) / 2;
+		}
+		
+		/*
         if ((abs(delta_y1) + abs(delta_y2)) > (abs(delta_x1) + abs(delta_x2))) {
+			IOLog("delta_y1: %d, delta_y2: %d", delta_y1, delta_y2);
             int avgy = (delta_y1 + delta_y2) / 2;
             scrolly = avgy;
         }
         else {
+			IOLog("delta_x1: %d, delta_x2: %d", delta_x1, delta_x2);
             int avgx = (delta_x1 + delta_x2) / 2;
             scrollx = avgx;
         }
-        
-        if (abs(scrollx) < 5 && abs(scrolly) < 5 && !sc->scrollingActive)
+		 */
+		
+//		IOLog("abs(scrollx): %d; abs(scrolly): %d", abs(scrollx), abs(scrolly));
+		if ((abs(scrollx) < index && abs(scrolly) < index) && !sc->scrollingActive) {
             return false;
+		}
         
         if (_scrollHandler){
             _scrollHandler->softc = sc;
@@ -360,7 +479,9 @@ bool VoodooI2CCSGestureEngine::ProcessThreeFingerSwipe(csgesture_softc *sc, int 
             _scrollHandler->softc = sc;
             _scrollHandler->stopScroll();
         }
-        int i1 = iToUse[0];
+		enum PinchSpread gesture = PinchSpread::Null;
+		
+		int i1 = iToUse[0];
         int delta_x1 = sc->x[i1] - sc->lastx[i1];
         int delta_y1 = sc->y[i1] - sc->lasty[i1];
         
@@ -371,7 +492,15 @@ bool VoodooI2CCSGestureEngine::ProcessThreeFingerSwipe(csgesture_softc *sc, int 
         int i3 = iToUse[2];
         int delta_x3 = sc->x[i3] - sc->lastx[i3];
         int delta_y3 = sc->y[i3] - sc->lasty[i3];
-        
+		
+		if (isThreeFingerPinch(delta_y1, delta_y2, delta_y3)) {
+			gesture = PinchSpread::GesturePinch;
+		}
+		else if (isThreeFingerSpread(delta_y1, delta_y2, delta_y3)) {
+			gesture = PinchSpread::GestureSpread;
+		}
+		else gesture = PinchSpread::Null;
+		
         int avgx = (delta_x1 + delta_x2 + delta_x3) / 3;
         int avgy = (delta_y1 + delta_y2 + delta_y3) / 3;
         
@@ -380,14 +509,41 @@ bool VoodooI2CCSGestureEngine::ProcessThreeFingerSwipe(csgesture_softc *sc, int 
         sc->multitaskinggesturetick++;
         
         if (sc->multitaskinggesturetick > 5 && !sc->multitaskingdone) {
+			if (gesture == PinchSpread::GesturePinch) {
+				uint8_t shiftKeys = KBD_LGUI_BIT;
+				uint8_t keyCodes[KBD_KEY_CODES] = { 0, 0, 0, 0, 0, 0 };
+				keyCodes[0] = 0x17;
+				update_keyboard(shiftKeys, keyCodes);
+				shiftKeys = 0;
+				keyCodes[0] = 0x0;
+				update_keyboard(shiftKeys, keyCodes);
+				sc->multitaskingx = 0;
+				sc->multitaskingy = 0;
+				sc->multitaskingdone = true;
+			}
+			else if (gesture == PinchSpread::GestureSpread) {
+				uint8_t shiftKeys = KBD_LGUI_BIT;
+				uint8_t keyCodes[KBD_KEY_CODES] = { 0, 0, 0, 0, 0, 0 };
+				keyCodes[0] = 0x1a;
+				update_keyboard(shiftKeys, keyCodes);
+				shiftKeys = 0;
+				keyCodes[0] = 0x0;
+				update_keyboard(shiftKeys, keyCodes);
+				sc->multitaskingx = 0;
+				sc->multitaskingy = 0;
+				sc->multitaskingdone = true;
+			}
+			else {
             if ((abs(delta_y1) + abs(delta_y2) + abs(delta_y3)) > (abs(delta_x1) + abs(delta_x2) + abs(delta_x3))) {
                 if (abs(sc->multitaskingy) > 50) {
                     uint8_t shiftKeys = KBD_LCONTROL_BIT;
                     uint8_t keyCodes[KBD_KEY_CODES] = { 0, 0, 0, 0, 0, 0 };
-                    if (sc->multitaskingy < 0)
-                        keyCodes[0] = 0x52;
-                    else
-                        keyCodes[0] = 0x51;
+					if (sc->multitaskingy < 0) { // 3 finger swipe up
+						keyCodes[0] = 0x52;
+					}
+					else { // 3 finger swipe down
+						keyCodes[0] = 0x51;
+					}
                     update_keyboard(shiftKeys, keyCodes);
                     shiftKeys = 0;
                     keyCodes[0] = 0x0;
@@ -401,9 +557,9 @@ bool VoodooI2CCSGestureEngine::ProcessThreeFingerSwipe(csgesture_softc *sc, int 
                 if (abs(sc->multitaskingx) > 50) {
                     uint8_t shiftKeys = KBD_LCONTROL_BIT;
                     uint8_t keyCodes[KBD_KEY_CODES] = { 0, 0, 0, 0, 0, 0 };
-                    if (sc->multitaskingx > 0)
+                    if (sc->multitaskingx > 0) // 3 finger swipe right
                         keyCodes[0] = 0x50;
-                    else
+                    else // 3 finger swipe left
                         keyCodes[0] = 0x4F;
                     update_keyboard(shiftKeys, keyCodes);
                     shiftKeys = 0;
@@ -414,6 +570,7 @@ bool VoodooI2CCSGestureEngine::ProcessThreeFingerSwipe(csgesture_softc *sc, int 
                     sc->multitaskingdone = true;
                 }
             }
+			}
         }
         else if (sc->multitaskinggesturetick > 25) {
             sc->multitaskingx = 0;
@@ -436,7 +593,9 @@ bool VoodooI2CCSGestureEngine::ProcessFourFingerSwipe(csgesture_softc *sc, int a
     if (abovethreshold == 4) {
         _scrollHandler->softc = sc;
         _scrollHandler->stopScroll();
-        
+		
+		enum PinchSpread gesture = PinchSpread::Null;
+		
         int i1 = iToUse[0];
         int delta_x1 = sc->x[i1] - sc->lastx[i1];
         int delta_y1 = sc->y[i1] - sc->lasty[i1];
@@ -452,7 +611,15 @@ bool VoodooI2CCSGestureEngine::ProcessFourFingerSwipe(csgesture_softc *sc, int a
         int i4 = iToUse[3];
         int delta_x4 = sc->x[i4] - sc->lastx[i4];
         int delta_y4 = sc->y[i4] - sc->lasty[i4];
-        
+		
+		if (isFourFingerPinch(delta_y1, delta_y2, delta_y3, delta_y4)) {
+			gesture = PinchSpread::GesturePinch;
+		}
+		else if (isFourFingerSpread(delta_y1, delta_y2, delta_y3, delta_y4)) {
+			gesture = PinchSpread::GestureSpread;
+		}
+		else gesture = PinchSpread::Null;
+		
         int avgx = (delta_x1 + delta_x2 + delta_x3 + delta_x4) / 4;
         int avgy = (delta_y1 + delta_y2 + delta_y3 + delta_y4) / 4;
         
@@ -460,17 +627,44 @@ bool VoodooI2CCSGestureEngine::ProcessFourFingerSwipe(csgesture_softc *sc, int a
         sc->multitaskingy += avgy;
         sc->multitaskinggesturetick++;
         
-        if (sc->multitaskinggesturetick > 30 && !sc->multitaskingdone) {
+        if (sc->multitaskinggesturetick > 15 && !sc->multitaskingdone) {
+			if (gesture == PinchSpread::GesturePinch) {
+				uint8_t shiftKeys = 0x0;
+				uint8_t keyCodes[KBD_KEY_CODES] = { 0, 0, 0, 0, 0, 0 };
+				keyCodes[0] = 0x45;
+				update_keyboard(shiftKeys, keyCodes);
+				keyCodes[0] = 0x0;
+				update_keyboard(shiftKeys, keyCodes);
+				sc->multitaskingx = 0;
+				sc->multitaskingy = 0;
+				sc->multitaskingdone = true;
+			}
+			else if (gesture == PinchSpread::GestureSpread) {
+				uint8_t shiftKeys = 0x0;
+				uint8_t keyCodes[KBD_KEY_CODES] = { 0, 0, 0, 0, 0, 0 };
+				keyCodes[0] = 0x44;
+				update_keyboard(shiftKeys, keyCodes);
+				keyCodes[0] = 0x0;
+				update_keyboard(shiftKeys, keyCodes);
+				sc->multitaskingx = 0;
+				sc->multitaskingy = 0;
+				sc->multitaskingdone = true;
+			}
+			else {
             if ((abs(delta_y1) + abs(delta_y2) + abs(delta_y3) + abs(delta_y4)) > (abs(delta_x1) + abs(delta_x2) + abs(delta_x3) + abs(delta_x4))) {
                 if (abs(sc->multitaskingy) > 50) {
                     uint8_t shiftKeys = KBD_LCONTROL_BIT;
                     uint8_t keyCodes[KBD_KEY_CODES] = { 0, 0, 0, 0, 0, 0 };
-                    if (sc->multitaskingy < 0){
-                        shiftKeys = KBD_LCONTROL_BIT;
-                        keyCodes[0] = 0x44;
-                    }else{
-                        shiftKeys = KBD_LGUI_BIT;
-                        keyCodes[0] = 0x1A;}
+                    if (sc->multitaskingy < 0){ // 4 finger swipe up
+                        shiftKeys = uint8_t(0x09);
+                        keyCodes[0] = 0x09;
+                    }
+					else { // 4 finger swipe down
+               //         shiftKeys = KBD_LGUI_BIT;
+               //         keyCodes[0] = 0x1A;
+						shiftKeys = KBD_LGUI_BIT;
+						keyCodes[0] = 0x10;
+					}
                     update_keyboard(shiftKeys, keyCodes);
                     shiftKeys = 0;
                     keyCodes[0] = 0x0;
@@ -484,12 +678,16 @@ bool VoodooI2CCSGestureEngine::ProcessFourFingerSwipe(csgesture_softc *sc, int a
                 if (abs(sc->multitaskingx) > 50) {
                     uint8_t shiftKeys = KBD_LCONTROL_BIT;
                     uint8_t keyCodes[KBD_KEY_CODES] = { 0, 0, 0, 0, 0, 0 };
-                    if (sc->multitaskingx > 0){
-                        shiftKeys = 0;
-                        keyCodes[0] = 0x44;
-                    } else {
-                        shiftKeys = KBD_LGUI_BIT;
-                        keyCodes[0] = 0x14;}
+                    if (sc->multitaskingx > 0){ // 4 finger swipe right
+//                        shiftKeys = 0;
+//                        keyCodes[0] = 0x44;
+         				shiftKeys = KBD_LGUI_BIT;
+         				keyCodes[0] = 0x0b;
+                    }
+					else {
+                        shiftKeys = KBD_LGUI_BIT; // 4 finger swipe left
+                        keyCodes[0] = 0x14;
+					}
                     update_keyboard(shiftKeys, keyCodes);
                     shiftKeys = 0;
                     keyCodes[0] = 0x0;
@@ -499,8 +697,9 @@ bool VoodooI2CCSGestureEngine::ProcessFourFingerSwipe(csgesture_softc *sc, int a
                     sc->multitaskingdone = true;
                 }
             }
+			}
         }
-        else if (sc->multitaskinggesturetick > 70) {
+        else if (sc->multitaskinggesturetick > 50) {
             sc->multitaskingx = 0;
             sc->multitaskingy = 0;
             sc->multitaskinggesturetick = 0;
@@ -519,12 +718,13 @@ bool VoodooI2CCSGestureEngine::ProcessFourFingerSwipe(csgesture_softc *sc, int a
 
 void VoodooI2CCSGestureEngine::TapToClickOrDrag(csgesture_softc *sc, int button) {
     int freqmult = 10 / sc->frequency;
+	int multipler = 10;
     if (!sc->settings.tapToClickEnabled)
         return;
     
     sc->tickssinceclick++;
     if (sc->mouseDownDueToTap && sc->idForMouseDown == -1) {
-        if (sc->tickssinceclick > (10 * freqmult)) {
+        if (sc->tickssinceclick > (multipler * freqmult)) {
             sc->mouseDownDueToTap = false;
             sc->mousedown = false;
             sc->buttonmask = 0;
@@ -532,19 +732,20 @@ void VoodooI2CCSGestureEngine::TapToClickOrDrag(csgesture_softc *sc, int button)
         }
         return;
     }
+	
     if (sc->mousedown) {
         sc->tickssinceclick = 0;
         return;
     }
+	
     for (int i = 0; i < MAX_FINGERS; i++){
-        if (sc->truetick[i] < 10 && sc->truetick[i] > 0)
+//		if (sc->truetick[i]) IOLog("sc->truetick: %d", sc->truetick[i]);
+        if (sc->truetick[i] < 500 && sc->truetick[i] > 0)
             button++;
     }
 
-
     if (button == 0)
         return;
-    
     
     if (_scrollHandler){
         if (_scrollHandler->isScrolling()){
@@ -554,7 +755,8 @@ void VoodooI2CCSGestureEngine::TapToClickOrDrag(csgesture_softc *sc, int button)
     }
     
     int buttonmask = 0;
-    
+//	IOLog("Fingers pressed: %d\n", button);
+	
     switch (button) {
         case 1:
             buttonmask = MOUSE_BUTTON_1;
@@ -569,7 +771,7 @@ void VoodooI2CCSGestureEngine::TapToClickOrDrag(csgesture_softc *sc, int button)
             break;
     }
 
-    if (buttonmask != 0 && sc->tickssinceclick > (10 * freqmult) && sc->ticksincelastrelease == 0) {
+    if (buttonmask != 0 && sc->tickssinceclick > (multipler * freqmult) && sc->ticksincelastrelease == 0) {
         sc->idForMouseDown = -1;
         sc->mouseDownDueToTap = true;
         sc->buttonmask = buttonmask;
@@ -617,7 +819,7 @@ void VoodooI2CCSGestureEngine::ProcessGesture(csgesture_softc *sc) {
     }
     
     for (int i = 0;i < MAX_FINGERS;i++) {
-        if (sc->truetick[i] < (30 * frequmult) && sc->truetick[i] != 0)
+        if (sc->truetick[i] < (10 * frequmult) && sc->truetick[i] != 0)
             recentlyadded++;
         if (sc->tick[i] == 0)
             continue;
@@ -690,22 +892,35 @@ void VoodooI2CCSGestureEngine::ProcessGesture(csgesture_softc *sc) {
             
             sc->mousedown = true;
             sc->tickssinceclick = 0;
-            
+			
+			// Bottom secondary press
             if (nfingers == 1 && ((int)(10*sc->x[iToUse[0]]/sc->resx) > (5 / sc->factor_x)) && ((int)(10*sc->y[iToUse[0]]/sc->resy) > (7 / sc->factor_y)))
                 sc->mousebutton = 2;
             
             switch (sc->mousebutton) {
-                case 1:
+				case 1: {
                     buttonmask = MOUSE_BUTTON_1;
+					sc->buttonmask = buttonmask;
                     break;
-                case 2:
+				}
+				case 2: {
                     buttonmask = MOUSE_BUTTON_2;
+					sc->buttonmask = buttonmask;
                     break;
-                case 3:
-                    buttonmask = MOUSE_BUTTON_3;
-                    break;
+				}
+				case 3: {
+					uint8_t shiftKeys = 0x09;
+					uint8_t keyCodes[KBD_KEY_CODES] = { 0, 0, 0, 0, 0, 0 };
+					keyCodes[0] = 0x07;
+					update_keyboard(shiftKeys, keyCodes);
+					shiftKeys = 0x0;
+					keyCodes[0] = 0x0;
+					update_keyboard(shiftKeys, keyCodes);
+				}
+                //    buttonmask = MOUSE_BUTTON_3;
+                //    break;
             }
-            sc->buttonmask = buttonmask;
+//            sc->buttonmask = buttonmask;
         }
         else if (sc->mousedown && !sc->buttondown) {
             sc->mousedown = false;
@@ -716,17 +931,18 @@ void VoodooI2CCSGestureEngine::ProcessGesture(csgesture_softc *sc) {
     
 #pragma mark shift to last
     int releasedfingers = 0;
+	int multiplier = 10;
     
     for (int i = 0;i < MAX_FINGERS;i++) {
         if (sc->x[i] != -1) {
             if (sc->lastx[i] == -1) {
-                if (sc->ticksincelastrelease < (10 * frequmult) && sc->mouseDownDueToTap && sc->idForMouseDown == -1) {
+                if (sc->ticksincelastrelease < (multiplier * frequmult) && sc->mouseDownDueToTap && sc->idForMouseDown == -1) {
                     if (sc->settings.tapDragEnabled)
                         sc->idForMouseDown = i; //Associate Tap Drag
                 }
             }
             sc->truetick[i]++;
-            if (sc->tick[i] < (10 * frequmult)) {
+            if (sc->tick[i] < (multiplier * frequmult)) {
                 if (sc->lastx[i] != -1) {
                     sc->totalx[i] += abs(sc->x[i] - sc->lastx[i]);
                     sc->totaly[i] += abs(sc->y[i] - sc->lasty[i]);
@@ -750,7 +966,7 @@ void VoodooI2CCSGestureEngine::ProcessGesture(csgesture_softc *sc) {
                 
                 sc->flextotalx[i] -= sc->xhistory[i][0];
                 sc->flextotaly[i] -= sc->yhistory[i][0];
-                for (int j = 1;j < (10 * frequmult);j++) {
+                for (int j = 1;j < (multiplier * frequmult);j++) {
                     sc->xhistory[i][j - 1] = sc->xhistory[i][j];
                     sc->yhistory[i][j - 1] = sc->yhistory[i][j];
                 }
@@ -766,11 +982,11 @@ void VoodooI2CCSGestureEngine::ProcessGesture(csgesture_softc *sc) {
             ClearTapDrag(sc, i);
             if (sc->lastx[i] != -1)
                 sc->ticksincelastrelease = -1;
-            for (int j = 0;j < (10 * frequmult);j++) {
+            for (int j = 0;j < (multiplier * frequmult);j++) {
                 sc->xhistory[i][j] = 0;
                 sc->yhistory[i][j] = 0;
             }
-            if (sc->tick[i] < (10 * frequmult) && sc->tick[i] != 0) {
+            if (sc->tick[i] < (multiplier * frequmult) && sc->tick[i] != 0) {
                 releasedfingers++;
             }
             sc->totalx[i] = 0;

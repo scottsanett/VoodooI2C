@@ -232,44 +232,36 @@ bool VoodooI2CCSGestureEngine::isThreeFingerPinch(int delta1, int delta2, int de
 	else return false;
 }
 
-bool VoodooI2CCSGestureEngine::isFourFingerPinch(int delta1, int delta2, int delta3, int delta4) {
+bool VoodooI2CCSGestureEngine::isFourFingerPinch(int deltay1, int deltay2, int deltay3, int deltay4, int deltax1, int deltax2, int deltax3, int deltax4) {
 	
-	if (abs(delta1) < 2 || abs(delta2) < 2 || abs(delta3) < 2 || abs(delta4) < 2) {
-		return false;
+	if (deltay1 < 0) {
+		return (deltax1 > 0 && deltay2 > 0 && deltay3 > 0 && deltay4 > 0);
 	}
-	
-	if (delta1 < 0) {
-		return (delta2 >= 0 && delta3 >= 0 && delta4 >= 0);
+	else if (deltay2 < 0) {
+		return (deltax2 > 0 && deltay1 > 0 && deltay3 > 0 && deltay4 > 0);
 	}
-	else if (delta2 < 0) {
-		return (delta1 >= 0 && delta3 >= 0 && delta4 >= 0);
+	else if (deltay3 < 0) {
+		return (deltax3 > 0 && deltay1 > 0 && deltay2 > 0 && deltay4 > 0);
 	}
-	else if (delta3 < 0) {
-		return (delta1 >= 0 && delta2 >= 0 && delta4 >= 0);
-	}
-	else if (delta4 < 0) {
-		return (delta1 >= 0 && delta2 >= 0 && delta3 >= 0);
+	else if (deltay4 < 0) {
+		return (deltax4 > 0 && deltay1 > 0 && deltay2 > 0 && deltay3 > 0);
 	}
 	else return false;
 }
 
-bool VoodooI2CCSGestureEngine::isFourFingerSpread(int delta1, int delta2, int delta3, int delta4) {
+bool VoodooI2CCSGestureEngine::isFourFingerSpread(int deltay1, int deltay2, int deltay3, int deltay4, int deltax1, int deltax2, int deltax3, int deltax4) {
 	
-	if (abs(delta1) < 2 || abs(delta2) < 2 || abs(delta3) < 2 || abs(delta4) < 2) {
-		return false;
+	if (deltay1 > 0) {
+		return (deltax1 < 0 && deltay2 < 0 && deltay3 < 0 && deltay4 < 0);
 	}
-	
-	if (delta1 > 0) {
-		return (delta2 <= 0 && delta3 <= 0 && delta4 <= 0);
+	else if (deltay2 > 0) {
+		return (deltax2 < 0 && deltay1 < 0 && deltay3 < 0 && deltay4 < 0);
 	}
-	else if (delta2 > 0) {
-		return (delta1 <= 0 && delta3 <= 0 && delta4 <= 0);
+	else if (deltay3 > 0) {
+		return (deltax3 < 0 && deltay1 < 0 && deltay2 < 0 && deltay4 < 0);
 	}
-	else if (delta3 > 0) {
-		return (delta1 <= 0 && delta2 <= 0 && delta4 <= 0);
-	}
-	else if (delta4 > 0) {
-		return (delta1 <= 0 && delta2 <= 0 && delta3 <= 0);
+	else if (deltay4 > 0) {
+		return (deltax4 < 0 && deltay1 < 0 && deltay2 < 0 && deltay3 < 0);
 	}
 	else return false;
 }
@@ -510,9 +502,11 @@ bool VoodooI2CCSGestureEngine::ProcessThreeFingerSwipe(csgesture_softc *sc, int 
         
         if (sc->multitaskinggesturetick > 5 && !sc->multitaskingdone) {
 			if (gesture == PinchSpread::GesturePinch) {
-				uint8_t shiftKeys = KBD_LGUI_BIT;
+		//		uint8_t shiftKeys = KBD_LGUI_BIT;
+				uint8_t shiftKeys = 0x0;
 				uint8_t keyCodes[KBD_KEY_CODES] = { 0, 0, 0, 0, 0, 0 };
-				keyCodes[0] = 0x17;
+		//		keyCodes[0] = 0x17;
+				keyCodes[0] = 0x45;
 				update_keyboard(shiftKeys, keyCodes);
 				shiftKeys = 0;
 				keyCodes[0] = 0x0;
@@ -522,9 +516,11 @@ bool VoodooI2CCSGestureEngine::ProcessThreeFingerSwipe(csgesture_softc *sc, int 
 				sc->multitaskingdone = true;
 			}
 			else if (gesture == PinchSpread::GestureSpread) {
-				uint8_t shiftKeys = KBD_LGUI_BIT;
+		//		uint8_t shiftKeys = KBD_LGUI_BIT;
+				uint8_t shiftKeys = 0x0;
 				uint8_t keyCodes[KBD_KEY_CODES] = { 0, 0, 0, 0, 0, 0 };
-				keyCodes[0] = 0x1a;
+		//		keyCodes[0] = 0x1a;
+				keyCodes[0] = 0x44;
 				update_keyboard(shiftKeys, keyCodes);
 				shiftKeys = 0;
 				keyCodes[0] = 0x0;
@@ -612,10 +608,10 @@ bool VoodooI2CCSGestureEngine::ProcessFourFingerSwipe(csgesture_softc *sc, int a
         int delta_x4 = sc->x[i4] - sc->lastx[i4];
         int delta_y4 = sc->y[i4] - sc->lasty[i4];
 		
-		if (isFourFingerPinch(delta_y1, delta_y2, delta_y3, delta_y4)) {
+		if (isFourFingerPinch(delta_y1, delta_y2, delta_y3, delta_y4, delta_x1, delta_x2, delta_x3, delta_x4)) {
 			gesture = PinchSpread::GesturePinch;
 		}
-		else if (isFourFingerSpread(delta_y1, delta_y2, delta_y3, delta_y4)) {
+		else if (isFourFingerSpread(delta_y1, delta_y2, delta_y3, delta_y4, delta_x1, delta_x2, delta_x3, delta_x4)) {
 			gesture = PinchSpread::GestureSpread;
 		}
 		else gesture = PinchSpread::Null;
@@ -627,12 +623,15 @@ bool VoodooI2CCSGestureEngine::ProcessFourFingerSwipe(csgesture_softc *sc, int a
         sc->multitaskingy += avgy;
         sc->multitaskinggesturetick++;
         
-        if (sc->multitaskinggesturetick > 15 && !sc->multitaskingdone) {
+        if (sc->multitaskinggesturetick > 5 && !sc->multitaskingdone) {
 			if (gesture == PinchSpread::GesturePinch) {
-				uint8_t shiftKeys = 0x0;
+		//		uint8_t shiftKeys = 0x0;
+				uint8_t shiftKeys = KBD_LGUI_BIT;
 				uint8_t keyCodes[KBD_KEY_CODES] = { 0, 0, 0, 0, 0, 0 };
-				keyCodes[0] = 0x45;
+		//		keyCodes[0] = 0x45;
+				keyCodes[0] = 0x17;
 				update_keyboard(shiftKeys, keyCodes);
+				shiftKeys = 0x0;
 				keyCodes[0] = 0x0;
 				update_keyboard(shiftKeys, keyCodes);
 				sc->multitaskingx = 0;
@@ -640,10 +639,13 @@ bool VoodooI2CCSGestureEngine::ProcessFourFingerSwipe(csgesture_softc *sc, int a
 				sc->multitaskingdone = true;
 			}
 			else if (gesture == PinchSpread::GestureSpread) {
-				uint8_t shiftKeys = 0x0;
+		//		uint8_t shiftKeys = 0x0;
+				uint8_t shiftKeys = KBD_LGUI_BIT;
 				uint8_t keyCodes[KBD_KEY_CODES] = { 0, 0, 0, 0, 0, 0 };
-				keyCodes[0] = 0x44;
+		//		keyCodes[0] = 0x44;
+				keyCodes[0] = 0x1a;
 				update_keyboard(shiftKeys, keyCodes);
+				shiftKeys = 0x0;
 				keyCodes[0] = 0x0;
 				update_keyboard(shiftKeys, keyCodes);
 				sc->multitaskingx = 0;

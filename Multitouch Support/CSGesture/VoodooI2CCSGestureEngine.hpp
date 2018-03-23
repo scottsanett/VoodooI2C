@@ -54,8 +54,8 @@ private:
 	bool moveLeftDown(int dx, int dy);
 	bool isThreeFingerPinch(int deltay1, int deltay2, int deltay3);
 	bool isThreeFingerSpread(int deltay1, int deltay2, int deltay3);
-	bool isFourFingerPinch(int delta1, int delta2, int delta3, int delta4);
-	bool isFourFingerSpread(int delta1, int delta2, int delta3, int delta4);
+	bool isFourFingerPinch(int delta1, int delta2, int delta3, int delta4, int deltax1, int deltax2, int deltax3, int deltax4);
+	bool isFourFingerSpread(int delta1, int delta2, int delta3, int delta4, int deltax1, int deltax2, int deltax3, int deltax4);
     
     //os callbacks
     void update_relative_mouse(char button,
